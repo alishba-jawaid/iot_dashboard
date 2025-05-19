@@ -16,6 +16,8 @@ class Device(SQLModel, table=True):
     status: str
     battery: float
     sensor: float
+    error_rate: float = 0.0         # new field: 0.0–1.0 (or 0-100%)
+    last_error: Optional[str] = None  # new field
 
 # Device schema for API input
 class DeviceData(BaseModel):
@@ -23,6 +25,8 @@ class DeviceData(BaseModel):
     status: str
     battery: float
     sensor: float
+    error_rate: float = 0.0
+    last_error: Optional[str] = None
 
 # Create tables if not exist
 @app.on_event("startup")
