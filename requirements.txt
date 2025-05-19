@@ -3,3 +3,10 @@ uvicorn
 sqlmodel
 dash
 requests
+yagmail
+python-dotenv
+dash
+dash-bootstrap-components
+requests
+plotly
+pandas

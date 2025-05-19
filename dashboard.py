@@ -1,7 +1,6 @@
 import dash
 import dash_bootstrap_components as dbc
-from dash import dcc, html, dash_table
-from dash.dependencies import Input, Output
+from dash import dcc, html, dash_table, Input, Output, State, ctx
 import requests
 import pandas as pd
 import plotly.express as px
@@ -29,6 +28,20 @@ app.layout = dbc.Container([
     ]),
     dbc.Row([
         dbc.Col(html.Div(id="error-alert"), width=12)
+    ]),
+    dbc.Row([
+        dbc.Col(
+            dbc.Button(
+                "Download Device Table as CSV",
+                id="btn_csv",
+                color="primary",
+                size="lg",
+                className="mb-2",
+                style={"fontWeight": "bold", "fontSize": "18px", "boxShadow": "0 2px 8px rgba(0,0,0,0.15)"}
+            ),
+            width="auto"
+        ),
+        dcc.Download(id="download-dataframe-csv"),
     ]),
     dbc.Row([
         dbc.Col([
@@ -72,6 +85,25 @@ app.layout = dbc.Container([
     ], className="mb-4"),
 ], fluid=True)
 
+# Callback for CSV download
+@app.callback(
+    Output("download-dataframe-csv", "data"),
+    Input("btn_csv", "n_clicks"),
+    Input('interval', 'n_intervals'),
+    State('status-filter', 'value'),
+    State('device-filter', 'value'),
+    prevent_initial_call=True
+)
+def download_csv(n_clicks, n, selected_statuses, selected_devices):
+    if ctx.triggered_id != "btn_csv":
+        return dash.no_update
+    df = fetch_data()
+    if selected_statuses:
+        df = df[df['status'].isin(selected_statuses)]
+    if selected_devices:
+        df = df[df['device_id'].isin(selected_devices)]
+    return dcc.send_data_frame(df.to_csv, "devices.csv")
+
 @app.callback(
     [
         Output('error-alert', 'children'),
@@ -88,11 +120,10 @@ app.layout = dbc.Container([
         Input('device-filter', 'value')
     ]
 )
-
 def update_dashboard(n, selected_statuses, selected_devices):
     df = fetch_data()
     if df.empty:
-        return [], [], [], {}, {}, {}
+        return None, [], [], [], {}, {}, {}
 
     # Filters
     if selected_statuses:
