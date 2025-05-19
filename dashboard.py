@@ -28,6 +28,9 @@ app.layout = dbc.Container([
         dbc.Col(html.H1("IoT Device Health Dashboard", className="mb-2"), width=12)
     ]),
     dbc.Row([
+        dbc.Col(html.Div(id="error-alert"), width=12)
+    ]),
+    dbc.Row([
         dbc.Col([
             dcc.Dropdown(
                 id='status-filter',
@@ -70,16 +73,22 @@ app.layout = dbc.Container([
 ], fluid=True)
 
 @app.callback(
-    [Output('live-update-table', 'data'),
-     Output('live-update-table', 'columns'),
-     Output('device-filter', 'options'),
-     Output('status-pie', 'figure'),
-     Output('battery-bar', 'figure'),
-     Output('error-bar', 'figure')],
-    [Input('interval', 'n_intervals'),
-     Input('status-filter', 'value'),
-     Input('device-filter', 'value')]
+    [
+        Output('error-alert', 'children'),
+        Output('live-update-table', 'data'),
+        Output('live-update-table', 'columns'),
+        Output('device-filter', 'options'),
+        Output('status-pie', 'figure'),
+        Output('battery-bar', 'figure'),
+        Output('error-bar', 'figure')
+    ],
+    [
+        Input('interval', 'n_intervals'),
+        Input('status-filter', 'value'),
+        Input('device-filter', 'value')
+    ]
 )
+
 def update_dashboard(n, selected_statuses, selected_devices):
     df = fetch_data()
     if df.empty:
@@ -110,7 +119,20 @@ def update_dashboard(n, selected_statuses, selected_devices):
     error_bar = px.bar(df, x='device_id', y='error_rate', color='status', title='Error Rate')
     error_bar.update_layout(paper_bgcolor='#222', plot_bgcolor='#222', font_color='white')
 
-    return data, columns, device_options, status_pie, battery_bar, error_bar
+    # Detect error devices for alert
+    if not df.empty and (df['status'] == 'error').any():
+        error_devices = df[df['status'] == 'error']['device_id'].tolist()
+        alert = dbc.Alert(
+            f"⚠️ Attention: Devices in ERROR state: {', '.join(error_devices)}",
+            color="danger",
+            dismissable=True,
+            className="mb-4",
+            style={'fontWeight': 'bold', 'fontSize': '18px'}
+        )
+    else:
+        alert = None
+
+    return alert, data, columns, device_options, status_pie, battery_bar, error_bar
 
 if __name__ == "__main__":
     app.run(debug=True)
